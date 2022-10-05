@@ -22,10 +22,11 @@ from pipeline_stable_diffusion_ait import StableDiffusionAITPipeline
 @click.command()
 @click.option("--token", default="", help="access token")
 @click.option("--prompt", default="A vision of paradise, Unreal Engine", help="prompt")
+@click.option("--num_images", default=10, help="Number of images to generate")
 @click.option(
     "--benchmark", type=bool, default=False, help="run stable diffusion e2e benchmark"
 )
-def run(token, prompt, benchmark):
+def run(token, prompt, num_images, benchmark):
     pipe = StableDiffusionAITPipeline.from_pretrained(
         "CompVis/stable-diffusion-v1-4",
         revision="fp16",
@@ -34,12 +35,14 @@ def run(token, prompt, benchmark):
     ).to("cuda")
 
     with torch.autocast("cuda"):
-        image = pipe(prompt).images[0]
-        if benchmark:
-            t = benchmark_torch_function(10, pipe, prompt)
-            print(f"sd e2e: {t} ms")
-
-    image.save("example_ait.png")
+        prompt_prefix = "".join((ch if ch.isalnum() else '-') for ch in prompt)
+        for image_num in range(num_images):
+            print(f'\nGenerating image {image_num}') 
+            image = pipe(prompt).images[0]
+            if benchmark:
+                t = benchmark_torch_function(10, pipe, prompt)
+                print(f"sd e2e: {t} ms")
+            image.save(f"/output/{prompt_prefix}-{image_num}.png")
 
 
 if __name__ == "__main__":
